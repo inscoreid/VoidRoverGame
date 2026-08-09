@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { ethers } from "ethers";
 
-// Фикс для TypeScript, чтобы он не ругался на window.ethereum
 declare global {
   interface Window {
     ethereum?: any;
@@ -20,18 +19,27 @@ const GAME_ABI = [
 const GAME_ADDRESS = "0xf64bA70E3a47203A932FAF95367A7b5cC6D4e884"; 
 
 const BASE_MAINNET_PARAMS = {
-  chainId: "0x2105", // 8453
+  chainId: "0x2105", 
   chainName: "Base",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: ["https://mainnet.base.org"],
   blockExplorerUrls: ["https://basescan.org/"]
 };
 
+// Прописываем интерфейс, чтобы избавиться от any
+interface RoverData {
+  hull: string;
+  fuel: string;
+  distance: string;
+}
+
 export default function Home() {
   const [account, setAccount] = useState("");
   const [status, setStatus] = useState("");
-  const [roverData, setRoverData] = useState<any>(null);
-  const [tokenId, setTokenId] = useState("0"); 
+  const [roverData, setRoverData] = useState<RoverData | null>(null);
+  
+  // Убрали неиспользуемый сеттер setTokenId
+  const tokenId = "0"; 
 
   const checkAndSwitchNetwork = async () => {
     if (!window.ethereum) return false;
@@ -46,8 +54,9 @@ export default function Home() {
             method: "wallet_switchEthereumChain",
             params: [{ chainId: BASE_MAINNET_PARAMS.chainId }],
           });
-        } catch (switchError: any) {
-          if (switchError.code === 4902) {
+        } catch (switchError: unknown) {
+          const err = switchError as { code: number };
+          if (err.code === 4902) {
             await window.ethereum.request({
               method: "wallet_addEthereumChain",
               params: [BASE_MAINNET_PARAMS],
@@ -101,8 +110,8 @@ export default function Home() {
       await tx.wait();
       setStatus("Вездеход успешно создан!");
       fetchRoverStats();
-    } catch (err: any) {
-      setStatus("Ошибка: " + (err.reason || err.message));
+    } catch (err: unknown) {
+      setStatus("Ошибка: " + (err instanceof Error ? err.message : "Транзакция отклонена"));
     }
   };
 
@@ -114,8 +123,8 @@ export default function Home() {
       await tx.wait();
       setStatus("Экспедиция завершена!");
       fetchRoverStats();
-    } catch (err: any) {
-      setStatus("Ошибка: " + (err.reason || err.message));
+    } catch (err: unknown) {
+      setStatus("Ошибка: " + (err instanceof Error ? err.message : "Транзакция отклонена"));
     }
   };
 
