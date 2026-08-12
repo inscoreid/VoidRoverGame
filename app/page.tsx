@@ -16,7 +16,7 @@ const GAME_ABI = [
 ];
 
 // ВСТАВЬ СВОЙ АДРЕС ИЗ REMIX СЮДА:
-const GAME_ADDRESS = "0xf64bA70E3a47203A932FAF95367A7b5cC6D4e884"; 
+const GAME_ADDRESS = "ТВОЙ_АДРЕС_КОНТРАКТА_ИГРЫ"; 
 
 const BASE_MAINNET_PARAMS = {
   chainId: "0x2105", 
@@ -26,7 +26,6 @@ const BASE_MAINNET_PARAMS = {
   blockExplorerUrls: ["https://basescan.org/"]
 };
 
-// Прописываем интерфейс, чтобы избавиться от any
 interface RoverData {
   hull: string;
   fuel: string;
@@ -38,8 +37,8 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [roverData, setRoverData] = useState<RoverData | null>(null);
   
-  // Убрали неиспользуемый сеттер setTokenId
-  const tokenId = "0"; 
+  // Вернули стейт для управления разными вездеходами!
+  const [tokenId, setTokenId] = useState("0"); 
 
   const checkAndSwitchNetwork = async () => {
     if (!window.ethereum) return false;
@@ -47,7 +46,7 @@ export default function Home() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const network = await provider.getNetwork();
       
-      if (network.chainId !== 8453n) {
+      if (network.chainId !== BigInt(8453)) {
         setStatus("Переключаем на сеть Base...");
         try {
           await window.ethereum.request({
@@ -103,21 +102,29 @@ export default function Home() {
 
   const mintRover = async () => {
     try {
-      setStatus("Ожидание подтверждения транзакции...");
+      setStatus("Создаем новый вездеход...");
       const contract = await getContract();
       const tx = await contract.mintRover();
       setStatus("Транзакция отправлена. Ждем блоки...");
       await tx.wait();
-      setStatus("Вездеход успешно создан!");
-      fetchRoverStats();
+      setStatus("Новый вездеход успешно создан! Увеличь Rover ID на 1, чтобы увидеть его.");
     } catch (err: unknown) {
       setStatus("Ошибка: " + (err instanceof Error ? err.message : "Транзакция отклонена"));
     }
   };
 
   const explore = async () => {
+    if (roverData && parseInt(roverData.fuel) < 10) {
+      setStatus("Бро, у этого корыта нет топлива. Минти новый!");
+      return;
+    }
+    if (roverData && parseInt(roverData.hull) <= 0) {
+      setStatus("Вездеход уничтожен. Минти новый!");
+      return;
+    }
+
     try {
-      setStatus("Отправляем вездеход в пустоту...");
+      setStatus(`Отправляем вездеход #${tokenId} в пустоту...`);
       const contract = await getContract();
       const tx = await contract.explore(tokenId);
       await tx.wait();
@@ -130,6 +137,7 @@ export default function Home() {
 
   const fetchRoverStats = async () => {
     try {
+      setStatus("Загрузка статов...");
       const contract = await getContract();
       const data = await contract.rovers(tokenId);
       setRoverData({
@@ -137,8 +145,11 @@ export default function Home() {
         fuel: data.fuel.toString(),
         distance: data.distance.toString()
       });
+      setStatus("Статы обновлены!");
     } catch (err) {
       console.log("Вездеход не найден");
+      setStatus(`Вездеход #${tokenId} еще не существует`);
+      setRoverData(null);
     }
   };
 
@@ -158,37 +169,54 @@ export default function Home() {
             Connected: {account.slice(0,6)}...{account.slice(-4)}
           </p>
           
-          <div className="flex gap-4 mb-6 w-full">
-            <button onClick={mintRover} className="flex-1 py-2 bg-zinc-800 text-sm rounded hover:bg-zinc-700 transition-colors">
-              Минт Вездехода
-            </button>
-            <button onClick={fetchRoverStats} className="flex-1 py-2 bg-zinc-800 text-sm rounded hover:bg-zinc-700 transition-colors">
-              Обновить
-            </button>
+          <button onClick={mintRover} className="w-full mb-6 py-3 bg-zinc-800 text-sm rounded border border-zinc-700 hover:bg-zinc-700 transition-colors">
+            + Сминтить новый Вездеход
+          </button>
+
+          <div className="w-full bg-black p-4 rounded-lg mb-6 border border-zinc-800">
+            <label className="block text-xs text-zinc-500 mb-2">Выбери Rover ID из гаража:</label>
+            <div className="flex gap-2">
+              <input 
+                type="number" 
+                min="0"
+                value={tokenId} 
+                onChange={(e) => setTokenId(e.target.value)}
+                className="w-20 bg-zinc-900 text-orange-400 font-bold text-center border border-zinc-700 rounded outline-none focus:border-orange-500"
+              />
+              <button onClick={fetchRoverStats} className="flex-1 py-2 bg-zinc-800 text-sm rounded hover:bg-zinc-700 transition-colors">
+                Загрузить статы
+              </button>
+            </div>
           </div>
 
           {roverData && (
-            <div className="w-full bg-black p-5 rounded-lg mb-6 border border-zinc-800">
-              <div className="flex justify-between items-end mb-4 border-b border-zinc-800 pb-2">
-                <span className="text-sm text-zinc-500">Rover ID</span>
-                <span className="text-xl text-orange-500 font-bold">#{tokenId}</span>
+            <div className="w-full space-y-3 text-sm mb-6 px-2">
+              <div className="flex justify-between"><span className="text-zinc-400">Прочность:</span> 
+                <span className={parseInt(roverData.hull) < 30 ? "text-red-500 font-bold" : "text-white"}>{roverData.hull} %</span>
               </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-zinc-400">Прочность:</span> <span>{roverData.hull} %</span></div>
-                <div className="flex justify-between"><span className="text-zinc-400">Топливо:</span> <span>{roverData.fuel} L</span></div>
-                <div className="flex justify-between"><span className="text-zinc-400">Дистанция:</span> <span className="text-green-400">{roverData.distance} km</span></div>
+              <div className="flex justify-between"><span className="text-zinc-400">Топливо:</span> 
+                <span className={parseInt(roverData.fuel) < 20 ? "text-red-500 font-bold" : "text-white"}>{roverData.fuel} L</span>
+              </div>
+              <div className="flex justify-between"><span className="text-zinc-400">Дистанция:</span> 
+                <span className="text-green-400 font-bold">{roverData.distance} km</span>
               </div>
             </div>
           )}
 
-          <button onClick={explore} className="w-full py-4 bg-orange-600 text-white font-black text-lg rounded hover:bg-orange-500 hover:scale-[1.02] transition-all">
+          <button 
+            onClick={explore} 
+            disabled={!roverData}
+            className={`w-full py-4 text-white font-black text-lg rounded transition-all ${
+              roverData ? "bg-orange-600 hover:bg-orange-500 hover:scale-[1.02]" : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+            }`}
+          >
             ИССЛЕДОВАТЬ ПУСТОТУ
           </button>
         </div>
       )}
 
       {status && (
-        <div className="mt-8 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded text-sm text-center text-zinc-400 max-w-lg break-words">
+        <div className="mt-6 px-4 py-3 bg-zinc-900 border border-zinc-800 rounded text-sm text-center text-zinc-400 max-w-lg break-words">
           {status}
         </div>
       )}
