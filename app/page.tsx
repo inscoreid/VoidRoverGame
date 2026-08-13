@@ -154,8 +154,7 @@ export default function Home() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-zinc-950 text-white font-mono">
-      <h1 className="text-5xl font-black mb-2 text-orange-500 tracking-tighter">VOID ROVER</h1>
+<main className="flex min-h-screen flex-col items-center justify-center p-24 text-white font-mono bg-[linear-gradient(to_bottom,rgba(9,9,11,0.8),rgba(9,9,11,0.98)),url('/bg.jpg')] bg-cover bg-center bg-fixed">      <h1 className="text-5xl font-black mb-2 text-orange-500 tracking-tighter">VOID ROVER</h1>
       <p className="text-zinc-500 mb-8 tracking-widest text-sm uppercase">Base Mainnet Edition</p>
       
       {!account ? (
