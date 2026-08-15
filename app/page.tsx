@@ -16,7 +16,7 @@ const GAME_ABI = [
 ];
 
 // ВСТАВЬ СВОЙ АДРЕС ИЗ REMIX СЮДА:
-const GAME_ADDRESS = "ТВОЙ_АДРЕС_КОНТРАКТА_ИГРЫ"; 
+const GAME_ADDRESS = "0xf64bA70E3a47203A932FAF95367A7b5cC6D4e884"; 
 
 const BASE_MAINNET_PARAMS = {
   chainId: "0x2105", 
